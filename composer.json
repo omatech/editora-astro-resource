@@ -1,0 +1,35 @@
+{
+    "name": "omatech/editora-astro-resource",
+    "license": "MIT",
+    "description": "",
+    "authors": [
+        {
+            "name": "Christian Bohollo",
+            "email": "cbohollo@omatech.com"
+        }
+    ],
+    "require": {
+        "omatech/editora": "^6.0|^7.0",
+        "lambdish/phunctional": "^2.1"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Omatech\\AstroResource\\AstroResourceServiceProvider"
+            ]
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Omatech\\AstroResource\\": "src/"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "scripts": {}
+}
