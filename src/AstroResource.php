@@ -12,11 +12,12 @@ class AstroResource
         return self::getInstanceRoutes()->reduce(function ($acc, $route) {
             $isDefaultLanguageRoute = $route->language === config('editora.defaultLanguage');
             $includeHomePrefix = config('editora.homeNiceUrl') === true;
-
-            $rt['params']['slug'] = $route->niceurl;
+            
+            $rt['params']['slug'] = (config('editora.astroRoutesPrefix')[$route->class_name] ?? null) . '/' . $route->niceurl;
             if (!$includeHomePrefix) {
-                $link = str_replace('home', null, $route->niceurl);
-                $rt['params']['slug'] = ($link === "") ? null : $link;
+                $link = str_replace('home', null, $rt['params']['slug']);
+                $link = ltrim($link, '/');
+                $rt['params']['slug'] = $link === '' ? null : $link;
             }
 
             if (!$isDefaultLanguageRoute) {
@@ -30,6 +31,8 @@ class AstroResource
 
     static public function resources($instance, $global, $others = [])
     {
+        config('app.env') === 'local' ? cache()->forget('astro.resource.'.app()->getLocale().'.'.$instance['inst_id']) : null;
+
         return cache()->remember(
             'astro.resource.'.app()->getLocale().'.'.$instance['inst_id'],
             now()->addYear()->timestamp - now()->timestamp,
@@ -133,11 +136,14 @@ class AstroResource
 
     static private function getInstanceRoutes()
     {
+        config('app.env') === 'local' ? cache()->forget('astro.routes') : null;
         return cache()->remember(
             'astro.routes',
             now()->addYear()->timestamp - now()->timestamp,
             function() {
                 return OmpNiceurl::join('omp_instances', 'omp_instances.id', 'omp_niceurl.inst_id')
+                    ->join('omp_classes', 'omp_classes.id', 'omp_instances.class_id')
+                    ->select('omp_niceurl.*', 'omp_classes.name as class_name')
                     ->where('omp_instances.status', 'O')
                     ->limit(2000)
                     ->get();
@@ -146,6 +152,7 @@ class AstroResource
 
     static private function getStaticTexts()
     {
+        config('app.env') === 'local' ? cache()->forget('astro.statictext.'.app()->getLocale()) : null;
         return cache()->remember(
             'astro.statictext.'.app()->getLocale(),
             now()->addYear()->timestamp - now()->timestamp,
