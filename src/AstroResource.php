@@ -12,7 +12,7 @@ class AstroResource
         return self::getInstanceRoutes()->reduce(function ($acc, $route) {
             $isDefaultLanguageRoute = $route->language === config('editora.defaultLanguage');
             $includeHomePrefix = config('editora.homeNiceUrl') === true;
-            
+
             $rt['params']['slug'] = (config('editora.astroRoutesPrefix')[$route->class_name] ?? null) . '/' . $route->niceurl;
             if (!$includeHomePrefix) {
                 $link = str_replace('home', null, $rt['params']['slug']);
@@ -105,10 +105,8 @@ class AstroResource
     {
         return self::getInstanceRoutes()
             ->where('inst_id', $instance['inst_id'])
-            ->reduce(function ($acc, $url) use ($instance) {
-                if (in_array($url->language, config('editora.allowedLanguages', [])) || empty(config('editora.allowedLanguages', []))) {
-                    $acc[$url->language] = self::parseLink('/' . $url->language . '/' . $url->niceurl);
-                }
+            ->reduce(function ($acc, $url) {
+                $acc[$url->language] = self::parseLink('/' . $url->language . '/' . $url->niceurl);
                 return $acc;
             }, []);
     }
@@ -143,12 +141,14 @@ class AstroResource
             'astro.routes',
             now()->addYear()->timestamp - now()->timestamp,
             function() {
-                return OmpNiceurl::join('omp_instances', 'omp_instances.id', 'omp_niceurl.inst_id')
+                $query = OmpNiceurl::join('omp_instances', 'omp_instances.id', 'omp_niceurl.inst_id')
                     ->join('omp_classes', 'omp_classes.id', 'omp_instances.class_id')
                     ->select('omp_niceurl.*', 'omp_classes.name as class_name')
-                    ->where('omp_instances.status', 'O')
-                    ->limit(2000)
-                    ->get();
+                    ->where('omp_instances.status', 'O');
+                if(config('editora.allowedLanguages', []) !== []) {
+                    $query = $query->whereIn('omp_niceurl.language', config('editora.allowedLanguages', []));
+                }
+                return $query->limit(2000)->get();
             });
     }
 
