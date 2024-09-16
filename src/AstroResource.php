@@ -106,7 +106,9 @@ class AstroResource
         return self::getInstanceRoutes()
             ->where('inst_id', $instance['inst_id'])
             ->reduce(function ($acc, $url) use ($instance) {
-                $acc[$url->language] = self::parseLink('/' . $url->language . '/' . $url->niceurl);
+                if (in_array($url->language, config('editora.allowedLanguages', [])) || empty(config('editora.allowedLanguages', []))) {
+                    $acc[$url->language] = self::parseLink('/' . $url->language . '/' . $url->niceurl);
+                }
                 return $acc;
             }, []);
     }
