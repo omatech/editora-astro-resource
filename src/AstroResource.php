@@ -117,15 +117,22 @@ class AstroResource
     static private function parseLink($link)
     {
         $defaultLanguage = config('editora.defaultLanguage');
+        $useDefaultLanguage = config('editora.astro.useDefaultLanguage');
         $includeHomePrefix = config('editora.homeNiceUrl') === true;
 
-        if (str_contains($link, '/' . $defaultLanguage . '/')) {
+        if (str_contains($link, '/' . $defaultLanguage . '/') && !$useDefaultLanguage) {
             $link = str_replace('/' . $defaultLanguage . '/', '/', $link);
         }
 
         if (str_contains($link, 'home') && !$includeHomePrefix) {
             $link = str_replace('/home', '/', $link);
-            return strlen($link) > 1 ? rtrim($link, '/') : $link;
+        }
+
+        $link = rtrim($link, '/');
+
+        $fn = config('editora.astro.alternativeLinkFunction');
+        if(class_exists($fn)) {
+            return (new $fn)->__invoke($link);
         }
         return $link;
     }
