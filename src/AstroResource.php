@@ -129,6 +129,7 @@ class AstroResource
         }
 
         $link = rtrim($link, '/');
+        $link = $link === '' ? '/' : $link;
 
         $fn = config('editora.astro.alternativeLinkFunction');
         if(class_exists($fn)) {
