@@ -103,6 +103,9 @@ class AstroResource
 
     static private function getAlternativeLinks($instance)
     {
+        if($instance['meta']['is_linkable'] === false) {
+            return [];
+        }
         return self::getInstanceRoutes()
             ->where('inst_id', $instance['inst_id'])
             ->reduce(function ($acc, $url) {
