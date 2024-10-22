@@ -7,7 +7,7 @@ use function Lambdish\Phunctional\reduce;
 
 class AstroResource
 {
-    static public function routes()
+    public static function routes()
     {
         return self::getInstanceRoutes()->reduce(function ($acc, $route) {
             $isDefaultLanguageRoute = $route->language === config('editora.defaultLanguage');
@@ -29,7 +29,7 @@ class AstroResource
         }, []);
     }
 
-    static public function resources($instance, $global, $others = [])
+    public static function resources($instance, $global, $others = [])
     {
         config('app.env') === 'local' ? cache()->forget('astro.resource.'.app()->getLocale().'.'.$instance['inst_id']) : null;
 
@@ -46,13 +46,13 @@ class AstroResource
             });
     }
 
-    static private function parseInstance($instance)
+    protected static function parseInstance($instance)
     {
         $instance = self::parseMeta($instance);
         return self::parseFields($instance);
     }
 
-    static private function parseFields($instance)
+    protected static function parseFields($instance)
     {
         return reduce(function ($acc, $value, $field) {
             if (!in_array($field, self::ignoreFieldsFromInstance()) && !self::isImage($field)) {
@@ -68,7 +68,7 @@ class AstroResource
         }, $instance, []);
     }
 
-    static private function parseRelations($relations)
+    protected static function parseRelations($relations)
     {
         return map(function ($relation) {
             return reduce(function ($acc, $relationInstances, $field) {
@@ -78,20 +78,20 @@ class AstroResource
         }, $relations);
     }
 
-    static private function parseOthers($others)
+    protected static function parseOthers($others)
     {
         return map(function ($other) {
             return self::parseInstance($other);
         }, $others);
     }
 
-    static private function isImage($field)
+    protected static function isImage($field)
     {
         $pattern = '/\w+_(imgid|imghash|imgextension)/';
         return preg_match($pattern, $field) === 1;
     }
 
-    static private function parseMeta($instance)
+    protected static function parseMeta($instance)
     {
         $instance['meta']['is_linkable'] = $instance['has_urlnice'] ?? false;
         $instance['meta']['link'] = ($instance['meta']['is_linkable']) ? $instance['link'] : null;
@@ -101,7 +101,7 @@ class AstroResource
         return $instance;
     }
 
-    static private function getAlternativeLinks($instance)
+    protected static function getAlternativeLinks($instance)
     {
         if($instance['meta']['is_linkable'] === false) {
             return [];
@@ -114,7 +114,7 @@ class AstroResource
             }, []);
     }
 
-    static private function parseLink($link)
+    protected static function parseLink($link)
     {
         $defaultLanguage = config('editora.defaultLanguage');
         $useDefaultLanguage = config('editora.astro.useDefaultLanguage');
@@ -128,24 +128,17 @@ class AstroResource
             $link = str_replace('/home', '/', $link);
         }
 
-        $link = rtrim($link, '/');
-        $link = $link === '' ? '/' : $link;
-
-        $fn = config('editora.astro.alternativeLinkFunction');
-        if(class_exists($fn)) {
-            return (new $fn)->__invoke($link);
-        }
-        return $link;
+        return rtrim($link, '/');
     }
 
-    static private function ignoreFieldsFromInstance()
+    protected static function ignoreFieldsFromInstance()
     {
         return [
             'id', 'inst_id', 'lang', 'nom_intern', 'metadata', 'has_urlnice', 'niceurl', 'link'
         ];
     }
 
-    static private function getInstanceRoutes()
+    protected static function getInstanceRoutes()
     {
         config('app.env') === 'local' ? cache()->forget('astro.routes') : null;
         return cache()->remember(
@@ -163,7 +156,7 @@ class AstroResource
             });
     }
 
-    static private function getStaticTexts()
+    protected static function getStaticTexts()
     {
         config('app.env') === 'local' ? cache()->forget('astro.statictext.'.app()->getLocale()) : null;
         return cache()->remember(
