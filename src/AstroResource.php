@@ -134,7 +134,7 @@ class AstroResource
     protected static function ignoreFieldsFromInstance()
     {
         return [
-            'id', 'inst_id', 'lang', 'nom_intern', 'metadata', 'has_urlnice', 'niceurl', 'link'
+            'id', 'lang', 'nom_intern', 'metadata', 'has_urlnice', 'niceurl', 'link'
         ];
     }
 
