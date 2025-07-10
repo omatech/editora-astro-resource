@@ -128,7 +128,8 @@ class AstroResource
             $link = str_replace('/home', '/', $link);
         }
 
-        return rtrim($link, '/');
+        $link = rtrim($link, '/');
+        return $link === '' ? '/' : $link;    
     }
 
     protected static function ignoreFieldsFromInstance()
