@@ -33,6 +33,10 @@ class AstroResource
     {
         config('app.env') === 'local' ? cache()->forget('astro.resource.'.app()->getLocale().'.'.$instance['inst_id']) : null;
 
+        //SEO Transform
+        $instance = self::seoSeparator($instance);
+        //END SEO Transform
+
         return cache()->remember(
             'astro.resource.'.app()->getLocale().'.'.$instance['inst_id'],
             now()->addYear()->timestamp - now()->timestamp,
@@ -129,7 +133,7 @@ class AstroResource
         }
 
         $link = rtrim($link, '/');
-        return $link === '' ? '/' : $link;    
+        return $link === '' ? '/' : $link;
     }
 
     protected static function ignoreFieldsFromInstance()
@@ -172,5 +176,142 @@ class AstroResource
                     }, []);
             }
         );
+    }
+
+    private static function seoSeparator($fields)
+    {
+        if (!isset($fields['meta_robots'])) {
+            return $fields;
+        }
+
+        $seo = [
+            'meta_title' => $fields['meta_title'] ?? null,
+            'meta_description' => $fields['meta_description'] ?? null,
+            'meta_keywords' => $fields['meta_keywords'] ?? null,
+            'meta_robots' => $fields['meta_robots'] ?? null,
+            'og_title' => $fields['og_title'] ?? null,
+            'og_description' => $fields['og_description'] ?? null,
+            'og_image' => $fields['og_image'] ?? null,
+            'og_type' => $fields['og_type'] ?? null,
+        ];
+
+        $nonSeo = $fields;
+        foreach (array_keys($seo) as $key) {
+            unset($nonSeo[$key]);
+        }
+
+        $result = $nonSeo;
+        $result['seo'] = $seo;
+
+        $ogImageTranform = self::ogImageTransform($result['seo']);
+        $result['seo'] = $ogImageTranform;
+
+        $result = self::ldJsonTransform($result);
+
+        return $result;
+    }
+
+    private static function ldJsonTransform($fields) {
+        $result = $fields;
+
+        $ldJson = [
+            '@context' => 'https://schema.org',
+            '@type' => 'WebPage',
+            '@id' => 'https://www.ediversa.com' . $fields['link'] . '#webpage', //Url unica de la pagina + #webpage
+            'url' => 'https://www.ediversa.com' . $fields['link'] , //URL unica de la pagina
+            'inLanguage' => $fields['lang'], // Idioma de la pagina
+            'name' => $fields['seo']['meta_title'], // meta-title
+            'description' => $fields['seo']['meta_description'] //meta-description
+        ];
+
+        $result['seo']['ld'] = $ldJson;
+
+        if (isset($fields['relations']['SeoAbout'])) {
+            $about = self::seoAboutTranform($result);
+            $result['seo'] = $about;
+        }
+
+        if (isset($fields['relations']['SeoMention'])) {
+            $mention = self::seoMentionTransform($result);
+            $result['seo'] = $mention;
+        }
+
+        return $result;
+    }
+
+    private static function seoAboutTranform($fields) {
+        $about = [];
+
+        if (isset($fields['relations']['SeoAbout']['instances'])) {
+            foreach ($fields['relations']['SeoAbout']['instances'] as $item) {
+                $name = $item['about_name'];
+                $url = $item['about_url'];
+
+                if ($name || $url) {
+                    $about[] = [
+                        "@id"  => $url,
+                        "name" => $name
+                    ];
+                }
+            }
+
+            $fields['seo']['ld']['about'] = $about;
+        }
+
+        return $fields['seo'];
+    }
+
+    private static function seoMentionTransform($fields) {
+        $mention = [];
+
+        if (isset($fields['relations']['SeoMention']['instances'])) {
+            foreach ($fields['relations']['SeoMention']['instances'] as $item) {
+                $name = $item['mention_name'];
+                $url = $item['mention_url'];
+
+                if ($name || $url) {
+                    $mention[] = [
+                        "@id"  => $url,
+                        "name" => $name
+                    ];
+                }
+            }
+
+            $fields['seo']['ld']['mention'] = $mention;
+        }
+
+        return $fields['seo'];
+    }
+
+    private static function ogImageTransform($fields)
+    {
+        if (empty($fields['og_image'])) {
+            unset($fields['og_image']);
+            return $fields;
+        }
+
+        $publicPath = public_path($fields['og_image']);
+
+        $ogImageUrl = env('APP_URL'). $fields['og_image'] ?? null;
+
+        $ogImageType = null;
+        $ogImageWidth = null;
+        $ogImageHeight = null;
+        if (file_exists($publicPath)) {
+            $ogImageType = mime_content_type($publicPath) ?? null;
+
+            [$width, $height] = getimagesize($publicPath) ?? null;
+            $ogImageWidth = $width;
+            $ogImageHeight = $height;
+        }
+
+        $fields['og_image_url'] = $ogImageUrl;
+        $fields['og_image_type'] = $ogImageType;
+        $fields['og_image_width'] = $ogImageWidth;
+        $fields['og_image_height'] = $ogImageHeight;
+
+        unset($fields['og_image']);
+
+        return $fields;
     }
 }
