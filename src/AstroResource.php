@@ -31,23 +31,26 @@ class AstroResource
 
     public static function resources($instance, $global, $others = [])
     {
-        config('app.env') === 'local' ? cache()->forget('astro.resource.'.app()->getLocale().'.'.$instance['inst_id']) : null;
+        config('app.env') === 'local' ? cache()->forget('astro.resource.' . app()->getLocale() . '.' . $instance['inst_id']) : null;
 
         //SEO Transform
         $instance = self::seoSeparator($instance);
+        unset($instance['relations']['SeoAbout']);
+        unset($instance['relations']['SeoMention']);
         //END SEO Transform
 
         return cache()->remember(
-            'astro.resource.'.app()->getLocale().'.'.$instance['inst_id'],
+            'astro.resource.' . app()->getLocale() . '.' . $instance['inst_id'],
             now()->addYear()->timestamp - now()->timestamp,
-            function() use ($others, $instance, $global) {
+            function () use ($others, $instance, $global) {
                 return response()->json(array_merge([
                     'language' => app()->getLocale(),
                     'global' => self::parseInstance($global),
                     'root' => self::parseInstance($instance),
                     'texts' => self::getStaticTexts()
                 ], self::parseOthers($others)));
-            });
+            }
+        );
     }
 
     protected static function parseInstance($instance)
@@ -64,7 +67,10 @@ class AstroResource
                     $acc[$field] = self::parseRelations($value);
                 } else if ($field === 'meta') {
                     $acc['meta'] = $value;
-                } else {
+                } else if ($field === 'seo') {
+                    $acc['seo'] = $value;
+                }
+                else {
                     $acc['fields'][$field] = $value;
                 }
             }
@@ -107,7 +113,7 @@ class AstroResource
 
     protected static function getAlternativeLinks($instance)
     {
-        if($instance['meta']['is_linkable'] === false) {
+        if ($instance['meta']['is_linkable'] === false) {
             return [];
         }
         return self::getInstanceRoutes()
@@ -139,7 +145,21 @@ class AstroResource
     protected static function ignoreFieldsFromInstance()
     {
         return [
-            'id', 'lang', 'nom_intern', 'metadata', 'has_urlnice', 'niceurl', 'link'
+            'id',
+            'lang',
+            'nom_intern',
+            'metadata',
+            'has_urlnice',
+            'niceurl',
+            'link',
+            'meta_keywords',
+            'meta_description',
+            'og_description',
+            'og_image',
+            'og_type',
+            'meta_title',
+            'meta_robots',
+            'og_title'
         ];
     }
 
@@ -149,25 +169,26 @@ class AstroResource
         return cache()->remember(
             'astro.routes',
             now()->addYear()->timestamp - now()->timestamp,
-            function() {
+            function () {
                 $query = OmpNiceurl::join('omp_instances', 'omp_instances.id', 'omp_niceurl.inst_id')
                     ->join('omp_classes', 'omp_classes.id', 'omp_instances.class_id')
                     ->select('omp_niceurl.*', 'omp_classes.name as class_name')
                     ->where('omp_instances.status', 'O');
-                if(config('editora.allowedLanguages', []) !== []) {
+                if (config('editora.allowedLanguages', []) !== []) {
                     $query = $query->whereIn('omp_niceurl.language', config('editora.allowedLanguages', []));
                 }
                 return $query->limit(2000)->get();
-            });
+            }
+        );
     }
 
     protected static function getStaticTexts()
     {
-        config('app.env') === 'local' ? cache()->forget('astro.statictext.'.app()->getLocale()) : null;
+        config('app.env') === 'local' ? cache()->forget('astro.statictext.' . app()->getLocale()) : null;
         return cache()->remember(
-            'astro.statictext.'.app()->getLocale(),
+            'astro.statictext.' . app()->getLocale(),
             now()->addYear()->timestamp - now()->timestamp,
-            function() {
+            function () {
                 return OmpStaticText::where('language', app()->getLocale())
                     ->get()
                     ->reduce(function ($acc, $text) {
@@ -211,14 +232,15 @@ class AstroResource
         return $result;
     }
 
-    private static function ldJsonTransform($fields) {
+    private static function ldJsonTransform($fields)
+    {
         $result = $fields;
 
         $ldJson = [
             '@context' => 'https://schema.org',
             '@type' => 'WebPage',
-            '@id' => 'https://www.ediversa.com' . $fields['link'] . '#webpage', //Url unica de la pagina + #webpage
-            'url' => 'https://www.ediversa.com' . $fields['link'] , //URL unica de la pagina
+            '@id' => $fields['link'] . '#webpage', //Url unica de la pagina + #webpage
+            'url' => $fields['link'], //URL unica de la pagina
             'inLanguage' => $fields['lang'], // Idioma de la pagina
             'name' => $fields['seo']['meta_title'], // meta-title
             'description' => $fields['seo']['meta_description'] //meta-description
@@ -239,7 +261,8 @@ class AstroResource
         return $result;
     }
 
-    private static function seoAboutTranform($fields) {
+    private static function seoAboutTranform($fields)
+    {
         $about = [];
 
         if (isset($fields['relations']['SeoAbout']['instances'])) {
@@ -261,7 +284,8 @@ class AstroResource
         return $fields['seo'];
     }
 
-    private static function seoMentionTransform($fields) {
+    private static function seoMentionTransform($fields)
+    {
         $mention = [];
 
         if (isset($fields['relations']['SeoMention']['instances'])) {
@@ -292,7 +316,7 @@ class AstroResource
 
         $publicPath = public_path($fields['og_image']);
 
-        $ogImageUrl = env('APP_URL'). $fields['og_image'] ?? null;
+        $ogImageUrl = env('APP_URL') . $fields['og_image'] ?? null;
 
         $ogImageType = null;
         $ogImageWidth = null;
