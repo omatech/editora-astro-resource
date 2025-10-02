@@ -236,11 +236,13 @@ class AstroResource
     {
         $result = $fields;
 
+        $link = preg_replace('#/home$#', '', $fields['link']);
+
         $ldJson = [
             '@context' => 'https://schema.org',
             '@type' => 'WebPage',
-            '@id' => $fields['link'] . '#webpage', //Url unica de la pagina + #webpage
-            'url' => $fields['link'], //URL unica de la pagina
+            '@id' => $link . '#webpage', //Url unica de la pagina + #webpage
+            'url' => $link, //URL unica de la pagina
             'inLanguage' => $fields['lang'], // Idioma de la pagina
             'name' => $fields['seo']['meta_title'], // meta-title
             'description' => $fields['seo']['meta_description'] //meta-description
@@ -316,7 +318,7 @@ class AstroResource
 
         $publicPath = public_path($fields['og_image']);
 
-        $ogImageUrl = env('APP_URL') . $fields['og_image'] ?? null;
+        $ogImageUrl = $fields['og_image'] ?? null;
 
         $ogImageType = null;
         $ogImageWidth = null;
